@@ -26,7 +26,7 @@ class CricketJSONPredictor:
     
     def process_json_match(self, match_data: Dict) -> List[Dict]:
         """
-        Process a single match JSON data into training samples with robust error handling
+        Process JSON data into training samples 
         """
         processed_data = []
         
@@ -41,14 +41,12 @@ class CricketJSONPredictor:
                 current_score = 0
                 wickets = 0
                 ball_data = []
-                
-                # Handle case where overs might be missing or empty
+            
                 overs_data = innings.get('overs', [])
                 if not overs_data:
                     print(f"No overs data found in innings")
                     continue
                 
-                # Process each over
                 for over in overs_data:
                     try:
                         over_num = over.get('over', 0)
@@ -57,8 +55,7 @@ class CricketJSONPredictor:
                         if not deliveries:
                             print(f"No deliveries in over {over_num}")
                             continue
-                        
-                        # Process each delivery in the over
+
                         for delivery in deliveries:
                             try:
                                 runs_data = delivery.get('runs', {})
@@ -84,7 +81,6 @@ class CricketJSONPredictor:
                         print(f"Error processing over: {str(e)}")
                         continue
                 
-                # Generate samples at different stages of the innings
                 if ball_data:  # Only process if we have valid ball data
                     final_score = current_score
                     for i in range(len(ball_data)):
@@ -95,7 +91,6 @@ class CricketJSONPredictor:
                         current_over = current_state[-1]['over']
                         
                         try:
-                            # Calculate features
                             features = self._calculate_features(
                                 current_state,
                                 innings.get('powerplays', []),
@@ -114,8 +109,7 @@ class CricketJSONPredictor:
                 
         return processed_data
     
-    def _calculate_features(self, current_state: List[Dict], 
-                          powerplays: List[Dict], total_overs: int) -> Dict:
+    def _calculate_features(self, current_state: List[Dict], powerplays: List[Dict], total_overs: int) -> Dict:
         """Calculate features from current match state with error handling"""
         try:
             current_ball = current_state[-1]
@@ -159,7 +153,7 @@ class CricketJSONPredictor:
     
     def prepare_training_data(self, json_files: List[str]):
         """
-        Prepare training data from multiple JSON match files
+        Prepare training data from multiple JSON matches
         """
         all_samples = []
         processed_files = 0
@@ -181,16 +175,12 @@ class CricketJSONPredictor:
         
         if not all_samples:
             raise ValueError("No valid training samples were generated")
-            
-        # Convert to DataFrame
         df = pd.DataFrame(all_samples)
         return df[self.features], df['final_score']
     
     def train(self, X, y):
         """Train the prediction model"""
-        X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
         
         self.model = xgb.XGBRegressor(
             n_estimators=100,
@@ -216,7 +206,7 @@ class CricketJSONPredictor:
     
     def predict_live_match(self, current_match_json: Dict) -> Dict:
         """
-        Make prediction for an ongoing match with error handling
+        Make prediction for an ongoing match 
         """
         try:
             # Process current match state
@@ -271,7 +261,7 @@ class CricketJSONPredictor:
 def main():
     predictor = CricketJSONPredictor()
 
-    # Load sample match data
+    # Load test match data
     with open('test/1086066.json', 'r') as f:
         match_data = json.load(f)
     
