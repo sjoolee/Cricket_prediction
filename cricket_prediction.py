@@ -26,7 +26,7 @@ class CricketJSONPredictor:
     
     def process_json_match(self, match_data: Dict) -> List[Dict]:
         """
-        Process a single match JSON data into training samples
+        Process JSON data into training samples
         """
         processed_data = []
         
@@ -35,11 +35,9 @@ class CricketJSONPredictor:
             wickets = 0
             ball_data = []
             
-            # Process each over
             for over in innings.get('overs', []):
                 over_num = over['over']
                 
-                # Process each delivery in the over
                 for delivery in over.get('deliveries', []):
                     runs = delivery['runs']['total']
                     current_score += runs
@@ -56,7 +54,6 @@ class CricketJSONPredictor:
                         'wickets': wickets
                     })
             
-            # Generate samples at different stages of the innings
             final_score = current_score
             for i in range(len(ball_data)):
                 if i < 30:  # Skip very early stage predictions
@@ -77,8 +74,7 @@ class CricketJSONPredictor:
         
         return processed_data
     
-    def _calculate_features(self, current_state: List[Dict], 
-                          powerplays: List[Dict], total_overs: int) -> Dict:
+    def _calculate_features(self, current_state: List[Dict], powerplays: List[Dict], total_overs: int) -> Dict:
         """Calculate features from current match state"""
         current_ball = current_state[-1]
         
@@ -124,8 +120,6 @@ class CricketJSONPredictor:
                 match_data = json.load(f)
                 samples = self.process_json_match(match_data)
                 all_samples.extend(samples)
-        
-        # Convert to DataFrame
         df = pd.DataFrame(all_samples)
         return df[self.features], df['final_score']
     
@@ -133,9 +127,7 @@ class CricketJSONPredictor:
         """
         Train the prediction model
         """
-        X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
         
         self.model = xgb.XGBRegressor(
             n_estimators=100,
@@ -144,23 +136,18 @@ class CricketJSONPredictor:
             random_state=42,
             early_stopping_rounds = 10
         )
-        
-
-    # Use callbacks instead of early_stopping_rounds
         self.model.fit(
             X_train, y_train,
             eval_set=[(X_val, y_val)],  # Explicitly pass the callback
             verbose=False
         )
         
-        # Calculate validation metrics
         val_predictions = self.model.predict(X_val)
         metrics = {
             'rmse': np.sqrt(((val_predictions - y_val) ** 2).mean()),
             'mae': np.abs(val_predictions - y_val).mean(),
             'r2': 1 - ((y_val - val_predictions) ** 2).sum() / ((y_val - y_val.mean()) ** 2).sum()
         }
-    
         return metrics
 
     
@@ -168,7 +155,7 @@ class CricketJSONPredictor:
         """
         Make prediction for an ongoing match
         """
-        # Process current match state
+        # current match state
         current_state = self.process_json_match(current_match_json)[-1]  # Get latest state
         
         # Prepare features
@@ -240,8 +227,8 @@ def main():
     print(f"MAE: {metrics['mae']:.2f}")
     print(f"R²: {metrics['r2']:.2f}")
     
-    # Validate on holdout set
-    print("\nValidating on holdout set...")
+    # Validate on dataset
+    print("\nValidating on dataset...")
     validation_predictions = []
     actual_scores = []
     
@@ -262,8 +249,7 @@ def main():
         except Exception as e:
             print(f"Error validating {file}: {str(e)}")
             continue
-    
-    # Calculate validation metrics
+
     val_predictions = np.array(validation_predictions)
     val_actuals = np.array(actual_scores)
     
